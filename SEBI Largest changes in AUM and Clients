@@ -1,0 +1,123 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def plot_trends(df, company, column, title):
+    """
+    Plot the trend of the specified column for a given company.
+    
+    :param df: DataFrame containing the data.
+    :param company: Company name to filter the data.
+    :param column: Column to plot.
+    :param title: Title of the plot.
+    """
+    company_data = df[df['Portfolio_Manager'] == company]
+    company_data = company_data.sort_values(by=['Year', 'Month'])
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(company_data['Month_Year'], company_data[column], marker='o', label=company)
+    plt.title(title)
+    plt.xlabel('Time (Month-Year)')
+    plt.ylabel(column)
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+def analyze_top_aum_changes(csv_file):
+    """
+    Analyze Total_AUM for companies and print the top 5 companies with the largest
+    increase and the top 5 companies with the largest drop between Jan 2021 and Nov 2024.
+    """
+    try:
+        # Read the CSV file
+        df = pd.read_csv(csv_file)
+
+        # Create a Month-Year column for plotting
+        df['Month_Year'] = df['Year'].astype(str) + '-' + df['Month'].astype(str).str.zfill(2)
+
+        # Filter data for Jan 2021 and Nov 2024
+        jan_2021 = df[(df['Year'] == 2021) & (df['Month'] == 1)][['Portfolio_Manager', 'Total_AUM']]
+        nov_2024 = df[(df['Year'] == 2024) & (df['Month'] == 11)][['Portfolio_Manager', 'Total_AUM']]
+
+        # Merge the data on Portfolio_Manager
+        merged = pd.merge(jan_2021, nov_2024, on='Portfolio_Manager', suffixes=('_Jan2021', '_Nov2024'))
+
+        # Calculate percentage change
+        merged['AUM_Change'] = merged['Total_AUM_Nov2024'] - merged['Total_AUM_Jan2021']
+
+        # Sort by largest increase and largest drop
+        largest_increase = merged.nlargest(5, 'AUM_Change')
+        largest_drop = merged.nsmallest(5, 'AUM_Change')
+
+        print("Top 5 companies with largest increase in Total_AUM between Jan 2021 and Nov 2024:")
+        print("-" * 50)
+        for _, row in largest_increase.iterrows():
+            print(f"Company: {row['Portfolio_Manager']}, AUM Increase: {row['AUM_Change']}")
+            plot_trends(df, row['Portfolio_Manager'], 'Total_AUM', f"{row['Portfolio_Manager']} - Total AUM Trend")
+
+        print("\nTop 5 companies with largest drop in Total_AUM between Jan 2021 and Nov 2024:")
+        print("-" * 50)
+        for _, row in largest_drop.iterrows():
+            print(f"Company: {row['Portfolio_Manager']}, AUM Drop: {row['AUM_Change']}")
+            plot_trends(df, row['Portfolio_Manager'], 'Total_AUM', f"{row['Portfolio_Manager']} - Total AUM Trend")
+
+    except FileNotFoundError:
+        print(f"Error: Could not find the file '{csv_file}'")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+def analyze_top_clients_changes(csv_file):
+    """
+    Analyze Total_Clients for companies and print the top 5 companies with the largest
+    increase and the top 5 companies with the largest drop between Jan 2021 and Nov 2024.
+    """
+    try:
+        # Read the CSV file
+        df = pd.read_csv(csv_file)
+
+        # Create a Month-Year column for plotting
+        df['Month_Year'] = df['Year'].astype(str) + '-' + df['Month'].astype(str).str.zfill(2)
+
+        # Filter data for Jan 2021 and Nov 2024
+        jan_2021 = df[(df['Year'] == 2021) & (df['Month'] == 1)][['Portfolio_Manager', 'Total_Clients']]
+        nov_2024 = df[(df['Year'] == 2024) & (df['Month'] == 11)][['Portfolio_Manager', 'Total_Clients']]
+
+        # Merge the data on Portfolio_Manager
+        merged = pd.merge(jan_2021, nov_2024, on='Portfolio_Manager', suffixes=('_Jan2021', '_Nov2024'))
+
+        # Calculate change
+        merged['Clients_Change'] = merged['Total_Clients_Nov2024'] - merged['Total_Clients_Jan2021']
+
+        # Sort by largest increase and largest drop
+        largest_increase = merged.nlargest(5, 'Clients_Change')
+        largest_drop = merged.nsmallest(5, 'Clients_Change')
+
+        print("Top 5 companies with largest increase in Total_Clients between Jan 2021 and Nov 2024:")
+        print("-" * 50)
+        for _, row in largest_increase.iterrows():
+            print(f"Company: {row['Portfolio_Manager']}, Clients Increase: {row['Clients_Change']}")
+            plot_trends(df, row['Portfolio_Manager'], 'Total_Clients', f"{row['Portfolio_Manager']} - Total Clients Trend")
+
+        print("\nTop 5 companies with largest drop in Total_Clients between Jan 2021 and Nov 2024:")
+        print("-" * 50)
+        for _, row in largest_drop.iterrows():
+            print(f"Company: {row['Portfolio_Manager']}, Clients Drop: {row['Clients_Change']}")
+            plot_trends(df, row['Portfolio_Manager'], 'Total_Clients', f"{row['Portfolio_Manager']} - Total Clients Trend")
+
+    except FileNotFoundError:
+        print(f"Error: Could not find the file '{csv_file}'")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+def main():
+    csv_file = '/content/sebi_portfolio_data_complete (1).csv'
+
+    print("Analyzing Total_AUM changes...")
+    analyze_top_aum_changes(csv_file)
+
+    print("\nAnalyzing Total_Clients changes...")
+    analyze_top_clients_changes(csv_file)
+
+if __name__ == "__main__":
+    main()
