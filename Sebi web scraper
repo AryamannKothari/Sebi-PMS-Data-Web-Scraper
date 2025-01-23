@@ -1,0 +1,185 @@
+import csv
+from bs4 import BeautifulSoup
+import requests
+import time
+from google.colab import files
+
+#URL to get data from  
+BASE_URL = "https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doPmr=yes"
+
+def get_portfolio_managers(soup):
+    """Extract all portfolio manager options from the dropdown"""
+    select = soup.find('select', {'name': 'pmrId'})
+    if not select:
+        return []
+
+    managers = []
+    for option in select.find_all('option'):
+        if option.get('value') and option['value'] != '-- Select the Portfolio Manager Name --':
+            managers.append({
+                'id': option['value'],
+                'name': option.text.strip()
+            })
+    return managers
+
+def get_table_data(soup):
+    """
+    Locate the correct table by verifying the <thead> has:
+    'Particulars', 'Domestic Clients', and 'Foreign Clients'.
+    Then parse its two <tbody> rows:
+      1) No. of unique Clients
+      2) Assets under Management (AUM)
+    We return a single list-of-lists, each sub-list presumably 14 columns.
+    """
+    tables = soup.find_all(
+        "table",
+        class_="table table-striped table-bordered table-hover background statistics-table"
+    )
+
+    if not tables:
+        return []
+
+    for table in tables:
+        thead = table.find('thead')
+        if not thead:
+            continue
+
+        # Collect all <th> text in the <thead>
+        all_th = thead.find_all('th')
+        th_texts = [th.get_text(strip=True) for th in all_th]
+
+        # Check if it has the columns we expect
+        if ("Particulars" in th_texts
+            and "Domestic Clients" in th_texts
+            and "Foreign Clients" in th_texts):
+
+            tbody = table.find('tbody')
+            if not tbody:
+                return []
+
+            rows = tbody.find_all('tr')
+            if len(rows) < 2:
+                return []
+
+            # Extract columns from row #1 (Clients) and row #2 (AUM)
+            row1_cols = [td.get_text(strip=True) for td in rows[0].find_all('td')]
+            row2_cols = [td.get_text(strip=True) for td in rows[1].find_all('td')]
+
+            if len(row1_cols) == 8 and len(row2_cols) == 8:
+                combined = row1_cols[1:] + row2_cols[1:]  # 7 + 7 = 14
+                return [combined]
+
+    return []
+
+def scrape_data(session, pm_id, year, month):
+    """Scrape data for specific portfolio manager, year, and month."""
+    params = {
+        'pmrId': pm_id,
+        'year': str(year),
+        'month': str(month),
+        'doPmr': 'yes'
+    }
+
+    try:
+        response = session.get(BASE_URL, params=params)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        return get_table_data(soup)
+    except Exception as e:
+        print(f"Error scraping data for PM: {pm_id}, Year: {year}, Month: {month}")
+        print(f"Error details: {str(e)}")
+        return []
+
+def write_to_csv(data, filename):
+    """Write the collected data to a CSV file."""
+    headers = [
+        "Portfolio_Manager", "Year", "Month",
+        "PF/EPFO_Clients", "Corporates_Clients", "Non-Corporates_Clients",
+        "Non-Residents_Clients", "FPI_Clients", "Others_Clients", "Total_Clients",
+        "PF/EPFO_AUM", "Corporates_AUM", "Non-Corporates_AUM",
+        "Non-Residents_AUM", "FPI_AUM", "Others_AUM", "Total_AUM"
+    ]
+
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+        writer.writerows(data)
+
+def main():
+    # Create a session to maintain cookies
+    session = requests.Session()
+
+    # Get the initial page to extract portfolio managers
+    response = session.get(BASE_URL)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Get all portfolio managers
+    portfolio_managers = get_portfolio_managers(soup)
+    if not portfolio_managers:
+        print("No portfolio managers found!")
+        return
+
+    all_data = []
+    total_pms = len(portfolio_managers)
+    processed_companies = 0
+    skipped_companies = 0
+
+    # Years and months to scrape (Months: January, May, November)
+    years = range(2021, 2025)
+    months = [1, 5, 11]
+
+    for i, pm in enumerate(portfolio_managers, 1):
+        print(f"\nProcessing Portfolio Manager {i}/{total_pms}: {pm['name']}")
+
+        # Quick test: data for January 2021
+        january_2021_data = scrape_data(session, pm['id'], 2021, 1)
+
+        # Check if data is missing or all fields are zero
+        if not january_2021_data or all(all(field == '0' for field in row) for row in january_2021_data):
+            print(f"Data missing or all fields are zero for January 2021 for {pm['name']}. Skipping this portfolio manager.")
+            skipped_companies += 1
+            continue
+
+        print(f"Data found for January 2021 for {pm['name']}. Proceeding with scraping.")
+
+        company_data = []
+        for year in years:
+            for month in months:
+                time.sleep(0.15)  # short delay between requests
+                data_rows = scrape_data(session, pm['id'], year, month)
+                for row in data_rows:
+                    # Combine PM info + year/month + the 14 columns
+                    formatted_row = [pm['name'], year, month] + row
+                    company_data.append(formatted_row)
+
+                print(f"Completed: {year}-{month:02d}")
+
+        if company_data:
+            all_data.extend(company_data)
+            processed_companies += 1
+
+        # Save progress periodically (every 10 companies)
+        if processed_companies % 10 == 0:
+            temp_filename = f"sebi_portfolio_data_partial_{processed_companies}.csv"
+            write_to_csv(all_data, temp_filename)
+            print(f"\nIntermediate data saved to {temp_filename}")
+
+    # Write final output
+    output_filename = "sebi_portfolio_data_complete.csv"
+    write_to_csv(all_data, output_filename)
+
+    print(f"\nScraping Complete!")
+    print(f"Total companies processed successfully: {processed_companies}")
+    print(f"Total companies skipped: {skipped_companies}")
+    print(f"Data written to {output_filename}")
+
+    # Attempt download in Colab
+    try:
+        files.download(output_filename)
+        print("Download initiated. Check your browser's download folder.")
+    except Exception as e:
+        print(f"Error during download: {e}")
+        print("You can manually download the file from Colab's file browser.")
+
+if __name__ == "__main__":
+    main()
