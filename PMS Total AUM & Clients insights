@@ -1,0 +1,86 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def plot_total_aum_and_clients(csv_file):
+    """
+    Plot total AUM, total clients, total domestic clients, and total foreign clients over time for all companies combined.
+    """
+    try:
+        # Load the CSV file
+        df = pd.read_csv(csv_file)
+        
+        # Convert the Year and Month to a datetime object for easier plotting
+        df['Date'] = pd.to_datetime(df['Year'].astype(str) + '-' + df['Month'].astype(str) + '-01')
+        
+        # Group by Date and sum the required columns
+        grouped = df.groupby('Date').agg({
+            'Total_AUM': 'sum',
+            'Total_Clients': 'sum',
+            'PF/EPFO_Clients': 'sum',
+            'Corporates_Clients': 'sum',
+            'Non-Corporates_Clients': 'sum',
+            'Non-Residents_Clients': 'sum',
+            'FPI_Clients': 'sum',
+            'Others_Clients': 'sum'
+        }).reset_index()
+        
+        # Calculate total domestic clients and total foreign clients
+        grouped['Total_Domestic_Clients'] = (
+            grouped['PF/EPFO_Clients'] + grouped['Corporates_Clients'] + grouped['Non-Corporates_Clients']
+        )
+        grouped['Total_Foreign_Clients'] = (
+            grouped['Non-Residents_Clients'] + grouped['FPI_Clients'] + grouped['Others_Clients']
+        )
+        
+        # Plot Total AUM over time
+        plt.figure(figsize=(12, 6))
+        plt.plot(grouped['Date'], grouped['Total_AUM'], marker='o', label='Total AUM', color='blue')
+        plt.title('Total AUM Over Time (All Companies Combined)', fontsize=14)
+        plt.xlabel('Time', fontsize=12)
+        plt.ylabel('Total AUM (in Crores)', fontsize=12)
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Plot Total Clients over time
+        plt.figure(figsize=(12, 6))
+        plt.plot(grouped['Date'], grouped['Total_Clients'], marker='o', label='Total Clients', color='green')
+        plt.title('Total Clients Over Time (All Companies Combined)', fontsize=14)
+        plt.xlabel('Time', fontsize=12)
+        plt.ylabel('Total Clients', fontsize=12)
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Plot Total Domestic Clients over time
+        plt.figure(figsize=(12, 6))
+        plt.plot(grouped['Date'], grouped['Total_Domestic_Clients'], marker='o', label='Total Domestic Clients', color='orange')
+        plt.title('Total Domestic Clients Over Time (All Companies Combined)', fontsize=14)
+        plt.xlabel('Time', fontsize=12)
+        plt.ylabel('Total Domestic Clients', fontsize=12)
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Plot Total Foreign Clients over time
+        plt.figure(figsize=(12, 6))
+        plt.plot(grouped['Date'], grouped['Total_Foreign_Clients'], marker='o', label='Total Foreign Clients', color='red')
+        plt.title('Total Foreign Clients Over Time (All Companies Combined)', fontsize=14)
+        plt.xlabel('Time', fontsize=12)
+        plt.ylabel('Total Foreign Clients', fontsize=12)
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+    
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+# Specify the file path
+csv_file = '/content/sebi_portfolio_data_complete (1).csv'
+
+# Call the function to plot the graphs
+plot_total_aum_and_clients(csv_file)
