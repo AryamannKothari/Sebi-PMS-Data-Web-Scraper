@@ -1,0 +1,8 @@
+1. I scraped data from the following website, https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doPmr=yes
+2. I scraped data between the year 2021 - 2024. The reason is data for those years matched the requirement, "PF/EPFO_Clients", "Corporates_Clients", "Non-Corporates_Clients",
+        "Non-Residents_Clients", "FPI_Clients", "Others_Clients", "Total_Clients",
+        "PF/EPFO_AUM", "Corporates_AUM", "Non-Corporates_AUM",
+        "Non-Residents_AUM", "FPI_AUM", "Others_AUM", "Total_AUM"
+3. I scraped data for the months January, May and November, the reason is it would be extremely time consuming to extract data for all 12 months in a year which may cause google colab or website to crash.
+  These 3 months are spaced out and may reflect all significant changes throughout the year.
+4. I scraped data for a total of 539 companies, out of which many had incomplete or missing data.
