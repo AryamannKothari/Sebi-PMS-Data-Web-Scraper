@@ -1,0 +1,149 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the data
+file_path = '/content/sebi_portfolio_data_complete (1).csv'  # Update with your actual file path
+data = pd.read_csv(file_path)
+
+# Helper function to filter data for a specific year and month
+def filter_data(data, year, month):
+    return data[(data['Year'] == year) & (data['Month'] == month)]
+
+# Helper function to create percentage labels with smaller font
+def make_autopct(values):
+    def my_autopct(pct):
+        return f'{pct:.1f}%'
+    return my_autopct
+
+# Helper function to plot pie charts with top 5 companies and others
+def plot_top5_pie_chart(data, column, title):
+    # Create a copy of the data to avoid SettingWithCopyWarning
+    data = data.copy()
+    
+    # Calculate percentage contribution
+    data['Percentage'] = data[column] / data[column].sum() * 100
+    
+    # Sort by percentage and separate the top 5 and others
+    top5 = data.nlargest(5, 'Percentage')
+    others = data[~data.index.isin(top5.index)]
+    others_total = others[column].sum()
+    
+    # Combine top 5 and others
+    others_row = pd.DataFrame({
+        'Portfolio_Manager': ['Others'],
+        column: [others_total]
+    })
+    top5 = pd.concat([top5, others_row], ignore_index=True)
+    
+    labels = top5['Portfolio_Manager']
+    values = top5[column]
+    
+    # Plot the pie chart with reduced font sizes
+    plt.figure(figsize=(8, 6))
+    
+    # Set the default font size
+    plt.rcParams['font.size'] = 8.4  # Default is 12, reduced by 30%
+    
+    plt.pie(values, 
+            labels=labels, 
+            autopct=make_autopct(values),
+            startangle=140,
+            textprops={'fontsize': 7})  # This applies to both labels and percentage values
+            
+    plt.title(title, fontsize=8.4)  # Title font size (default 12, reduced by 30%)
+    plt.show()
+
+# Add derived columns for Domestic AUM, International AUM, Domestic Clients, International Clients
+data['Domestic_AUM'] = data['PF/EPFO_AUM'] + data['Corporates_AUM'] + data['Non-Corporates_AUM']
+data['International_AUM'] = data['Non-Residents_AUM'] + data['FPI_AUM'] + data['Others_AUM']
+data['Domestic_Clients'] = data['PF/EPFO_Clients'] + data['Corporates_Clients'] + data['Non-Corporates_Clients']
+data['International_Clients'] = data['Non-Residents_Clients'] + data['FPI_Clients'] + data['Others_Clients']
+
+# Filter data for the required years and months
+data_2021_jan = filter_data(data, 2021, 1)
+data_2024_nov = filter_data(data, 2024, 11)
+
+# Plot the required pie charts
+# 1. Total AUM 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='Total_AUM',
+    title='Total AUM 2021 January - Top 5 Companies and Others'
+)
+
+# 2. Total AUM 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='Total_AUM',
+    title='Total AUM 2024 November - Top 5 Companies and Others'
+)
+
+# 3. Total Domestic AUM 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='Domestic_AUM',
+    title='Total Domestic AUM 2021 January - Top 5 Companies and Others'
+)
+
+# 4. Total Domestic AUM 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='Domestic_AUM',
+    title='Total Domestic AUM 2024 November - Top 5 Companies and Others'
+)
+
+# 5. Total International AUM 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='International_AUM',
+    title='Total International AUM 2021 January - Top 5 Companies and Others'
+)
+
+# 6. Total International AUM 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='International_AUM',
+    title='Total International AUM 2024 November - Top 5 Companies and Others'
+)
+
+# 7. Total Clients 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='Total_Clients',
+    title='Total Clients 2021 January - Top 5 Companies and Others'
+)
+
+# 8. Total Clients 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='Total_Clients',
+    title='Total Clients 2024 November - Top 5 Companies and Others'
+)
+
+# 9. Total Domestic Clients 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='Domestic_Clients',
+    title='Total Domestic Clients 2021 January - Top 5 Companies and Others'
+)
+
+# 10. Total Domestic Clients 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='Domestic_Clients',
+    title='Total Domestic Clients 2024 November - Top 5 Companies and Others'
+)
+
+# 11. Total International Clients 2021 January
+plot_top5_pie_chart(
+    data_2021_jan,
+    column='International_Clients',
+    title='Total International Clients 2021 January - Top 5 Companies and Others'
+)
+
+# 12. Total International Clients 2024 November
+plot_top5_pie_chart(
+    data_2024_nov,
+    column='International_Clients',
+    title='Total International Clients 2024 November - Top 5 Companies and Others'
+)
