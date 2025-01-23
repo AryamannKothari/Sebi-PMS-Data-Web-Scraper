@@ -1,0 +1,54 @@
+import pandas as pd
+
+def analyze_large_values(csv_file):
+    """
+    Analyze CSV file for any values exceeding 1 lakh crore in any of the 14 data fields
+    and print the company details.
+    """
+    # Read the CSV file
+    df = pd.read_csv(csv_file)
+    
+    # Define the threshold (1 lakh Cr)
+    threshold = 100000   # All data fields are already in Crores
+    
+    # List of all data fields to check
+    data_fields = [
+        "PF/EPFO_Clients", "Corporates_Clients", "Non-Corporates_Clients",
+        "Non-Residents_Clients", "FPI_Clients", "Others_Clients", "Total_Clients",
+        "PF/EPFO_AUM", "Corporates_AUM", "Non-Corporates_AUM",
+        "Non-Residents_AUM", "FPI_AUM", "Others_AUM", "Total_AUM"
+    ]
+    
+    # Create a mask for rows where any of the data fields exceed the threshold
+    large_value_mask = False
+    for field in data_fields:
+        large_value_mask = large_value_mask | (df[field] > threshold)
+    
+    # Get the unique companies with large values
+    large_value_records = df[large_value_mask][['Portfolio_Manager', 'Year', 'Month']].drop_duplicates()
+    
+    if not large_value_records.empty:
+        print("\nCompanies with values exceeding 1 lakh crore:")
+        print("-" * 50)
+        
+        # Sort by Portfolio Manager, Year, and Month
+        large_value_records = large_value_records.sort_values(['Portfolio_Manager', 'Year', 'Month'])
+        
+        for _, row in large_value_records.iterrows():
+            print(f"Company: {row['Portfolio_Manager']}")
+            print(f"Time: {row['Month']}/{row['Year']}")
+            print("-" * 50)
+    else:
+        print("No values exceeding 1 lakh crore found in the dataset.")
+
+def main():
+    try:
+        csv_file = '/content/sebi_portfolio_data_complete (1).csv'
+        analyze_large_values(csv_file)
+    except FileNotFoundError:
+        print(f"Error: Could not find the file '{csv_file}'")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+if __name__ == "__main__":
+    main()
